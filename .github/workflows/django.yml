@@ -1,0 +1,38 @@
+name: Django CI
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build:
+
+    runs-on: self-hosted
+    strategy:
+      matrix:
+        python-version: [3.10.x]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v3
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install Dependencies
+      run: |
+        python3 -m venv env
+        source env/bin/activate
+        python -m pip install --upgrade pip
+        pip install -r requirement.txt
+        python manage.py makemigrations
+        python manage.py migrate
+        python manage.py collectstatic --noinput
+        deactivate
+
+    - name: Reload Nginx and Restart Gunicorn
+      run: |
+        sudo systemctl reload nginx
+        sudo systemctl restart hospital.gunicorn
